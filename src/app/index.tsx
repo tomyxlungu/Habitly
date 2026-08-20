@@ -1,8 +1,30 @@
 import HabitCard from "@/src/components/HabitCard";
 import ProgressCard from "@/src/components/ProgressCard";
+import type { Habit } from "@/types/habit";
 import { ScrollView, Text, View } from "react-native";
 
 export default function HomeScreen() {
+  const habits: Habit[] = [
+  {
+    id: "1",
+    title: "Read for 20 minutes",
+    frequency: "Daily",
+    completed: true,
+  },
+  {
+    id: "2",
+    title: "Drink 2L of water",
+    frequency: "Daily",
+    completed: false,
+  },
+  {
+    id: "3",
+    title: "Exercise",
+    frequency: "3 times a week",
+    completed: true,
+  },
+];
+
   return (
     <ScrollView className="flex-1 bg-background-50">
       <View className="px-5 pt-16 pb-10">
@@ -26,22 +48,10 @@ export default function HomeScreen() {
             Today's Habits
           </Text>
 
-          <HabitCard
-            title="Read for 20 minutes"
-            frequency="Daily"
-            completed={true}
-          />
-            <HabitCard
-            title="Drink 2L of water"
-            frequency="Daily"
-            completed={false}
-          />
+          {habits.map((habit) => (
+            <HabitCard key={habit.id} habit={habit} />
+          ))}
 
-          <HabitCard
-            title="Exercise"
-            frequency="3 times a week"
-            completed={false}
-          />
       </View>
     </ScrollView>
   );
