@@ -15,7 +15,10 @@ import { Button, ButtonText } from "@/components/ui/button";
 import AddHabit from "@/src/components/AddHabit";
 import HabitCard from "@/src/components/HabitCard";
 import ProgressCard from "@/src/components/ProgressCard";
-import type { Habit, HabitFrequency } from "@/src/types/habit";
+import type {
+  Habit,
+  HabitFrequency,
+} from "@/src/types/habit";
 
 export default function HomeScreen() {
   // Stores all habits displayed on the screen.
@@ -40,32 +43,48 @@ export default function HomeScreen() {
     },
   ]);
 
-  // Stores the habit the user wants to delete.
+  // Stores the habit selected during a long press.
   const [selectedHabit, setSelectedHabit] =
     useState<Habit | null>(null);
 
-  // Controls whether the delete dialog is visible.
-  const [showDeleteDialog, setShowDeleteDialog] =
+  // Stores the habit currently being edited.
+  const [editingHabit, setEditingHabit] =
+    useState<Habit | null>(null);
+
+  // Controls the action dialog.
+  const [showActionDialog, setShowActionDialog] =
     useState(false);
 
-  // Toggle a habit between completed and incomplete.
+  // Toggle a habit.
   const toggleHabit = (id: string) => {
     setHabits((currentHabits) =>
       currentHabits.map((habit) =>
         habit.id === id
-          ? { ...habit, completed: !habit.completed }
+          ? {
+              ...habit,
+              completed: !habit.completed,
+            }
           : habit
       )
     );
   };
 
-  // Open the delete confirmation dialog.
-  const openDeleteDialog = (habit: Habit) => {
+  // Open the action dialog.
+  const openHabitActions = (habit: Habit) => {
     setSelectedHabit(habit);
-    setShowDeleteDialog(true);
+    setShowActionDialog(true);
   };
 
-  // Delete the selected habit.
+  // Start editing a habit.
+  const editHabit = () => {
+    if (!selectedHabit) return;
+
+    setEditingHabit(selectedHabit);
+    setShowActionDialog(false);
+    setSelectedHabit(null);
+  };
+
+  // Delete a habit.
   const deleteHabit = () => {
     if (!selectedHabit) return;
 
@@ -75,7 +94,7 @@ export default function HomeScreen() {
       )
     );
 
-    setShowDeleteDialog(false);
+    setShowActionDialog(false);
     setSelectedHabit(null);
   };
 
@@ -84,11 +103,31 @@ export default function HomeScreen() {
     (habit) => habit.completed
   ).length;
 
-  // Add a new habit.
+  // Add or edit a habit.
   const addHabit = (
     title: string,
     frequency: HabitFrequency
   ) => {
+    // Edit existing habit.
+    if (editingHabit) {
+      setHabits((currentHabits) =>
+        currentHabits.map((habit) =>
+          habit.id === editingHabit.id
+            ? {
+                ...habit,
+                title,
+                frequency,
+              }
+            : habit
+        )
+      );
+
+      setEditingHabit(null);
+
+      return;
+    }
+
+    // Create new habit.
     const newHabit: Habit = {
       id: Date.now().toString(),
       title,
@@ -102,6 +141,12 @@ export default function HomeScreen() {
     ]);
   };
 
+  // Close the action dialog.
+  const closeActionDialog = () => {
+    setShowActionDialog(false);
+    setSelectedHabit(null);
+  };
+
   return (
     <>
       <KeyboardAwareScrollView
@@ -110,6 +155,7 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="px-5 pb-10 pt-16">
+
           {/* Header */}
           <View className="mb-8">
             <Text className="text-3xl font-black text-typography-900">
@@ -138,59 +184,100 @@ export default function HomeScreen() {
               key={habit.id}
               habit={habit}
               onToggle={toggleHabit}
-              onLongPress={openDeleteDialog}
+              onLongPress={openHabitActions}
             />
           ))}
 
-          {/* Add habit */}
-          <AddHabit onAdd={addHabit} />
+          {/* Add / Edit habit */}
+          <AddHabit
+            onAdd={addHabit}
+            editingHabit={editingHabit}
+            onCancelEdit={() =>
+              setEditingHabit(null)
+            }
+          />
+
         </View>
       </KeyboardAwareScrollView>
 
-      {/* Delete confirmation dialog */}
+      {/* Habit action dialog */}
       <AlertDialog
-        isOpen={showDeleteDialog}
-        onClose={() => setShowDeleteDialog(false)}
+        isOpen={showActionDialog}
+        onClose={closeActionDialog}
       >
         <AlertDialogBackdrop />
 
-        <AlertDialogContent className="rounded-3xl">
-          <AlertDialogHeader>
-            <Text className="text-xl font-bold text-typography-900">
-              Delete habit?
-            </Text>
+        <AlertDialogContent className="rounded-[28px] p-5">
+
+          {/* Header */}
+          <AlertDialogHeader className="pb-2">
+            <View className="w-full">
+
+              {/* Small indicator */}
+              <View className="mb-4 h-1.5 w-10 self-center rounded-full bg-outline-300" />
+
+              <Text className="text-xs font-bold uppercase tracking-wider text-typography-400">
+                Habit options
+              </Text>
+
+              <Text
+                numberOfLines={2}
+                className="mt-2 text-2xl font-black text-typography-900"
+              >
+                {selectedHabit?.title}
+              </Text>
+
+              {selectedHabit && (
+                <View className="mt-3 self-start rounded-full bg-background-100 px-3 py-1.5">
+                  <Text className="text-xs font-semibold text-typography-500">
+                    {selectedHabit.frequency}
+                  </Text>
+                </View>
+              )}
+
+            </View>
           </AlertDialogHeader>
 
-          <AlertDialogBody>
-            <Text className="text-typography-500">
-              You're about to delete{" "}
-              <Text className="font-semibold text-typography-900">
-                {selectedHabit?.title}
-              </Text>.
-            </Text>
+          {/* Actions */}
+          <AlertDialogBody className="pt-4">
 
-            <Text className="mt-2 text-typography-500">
-              This action can't be undone.
-            </Text>
-          </AlertDialogBody>
-
-          <AlertDialogFooter className="gap-3">
+            {/* Edit */}
             <Button
               variant="outline"
-              className="flex-1 rounded-xl"
-              onPress={() => setShowDeleteDialog(false)}
+              className="mb-3 h-14 rounded-2xl border-outline-200"
+              onPress={editHabit}
             >
-              <ButtonText>Cancel</ButtonText>
+              <ButtonText className="text-base font-bold text-typography-900">
+                Edit Habit
+              </ButtonText>
             </Button>
 
+            {/* Delete */}
             <Button
               variant="destructive"
-              className="flex-1 rounded-xl"
+              className="h-14 rounded-2xl"
               onPress={deleteHabit}
             >
-              <ButtonText>Delete</ButtonText>
+              <ButtonText className="text-base font-bold">
+                Delete Habit
+              </ButtonText>
+            </Button>
+
+          </AlertDialogBody>
+
+          {/* Cancel */}
+          <AlertDialogFooter className="pt-2">
+            <Button
+              variant="ghost"
+              className="h-12 w-full rounded-2xl"
+              onPress={closeActionDialog}
+            >
+              <ButtonText className="font-bold text-typography-500">
+                Cancel
+              </ButtonText>
             </Button>
           </AlertDialogFooter>
+
         </AlertDialogContent>
       </AlertDialog>
     </>
