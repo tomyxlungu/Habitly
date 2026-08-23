@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
+import AddHabit from "@/src/components/AddHabit";
 import HabitCard from "@/src/components/HabitCard";
 import ProgressCard from "@/src/components/ProgressCard";
 import type { Habit } from "@/src/types/habit";
@@ -41,6 +42,20 @@ export default function HomeScreen() {
     (habit) => habit.completed
   ).length;
 
+  const addHabit = (title: string) => {
+  const newHabit: Habit = {
+    id: Date.now().toString(),
+    title,
+    frequency: "Daily",
+    completed: false,
+  };
+
+  setHabits((currentHabits) => [
+    ...currentHabits,
+    newHabit,
+  ]);
+};
+
   return (
     <ScrollView className="flex-1 bg-background-50">
       <View className="px-5 pb-10 pt-16">
@@ -73,6 +88,8 @@ export default function HomeScreen() {
             onToggle={toggleHabit}
           />
         ))}
+
+        <AddHabit onAdd={addHabit} />
       </View>
     </ScrollView>
   );
