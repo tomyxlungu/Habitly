@@ -1,50 +1,50 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import { Card } from "@/components/ui/card";
+import type { Habit } from "@/types/habit";
 
 type HabitCardProps = {
-  title: string;
-  frequency: string;
-  completed: boolean;
+  habit: Habit;
+  onToggle: (id: string) => void;
 };
 
 export default function HabitCard({
-  title,
-  frequency,
-  completed,
+  habit,
+  onToggle,
 }: HabitCardProps) {
   return (
-    <Card className="mb-3 rounded-2xl p-4">
+    <Card className="mb-3 rounded-4xl p-4">
       <View className="flex-row items-center">
         {/* Completion button */}
-        <View
-          className={`mr-4 h-7 w-7 items-center justify-center rounded-full border-2 ${
-            completed
+        <Pressable
+          onPress={() => onToggle(habit.id)}
+          className={`mr-4 h-7 w-7 items-center justify-center rounded-full border-3 ${
+            habit.completed
               ? "border-primary-500 bg-primary-500"
-              : "border-outline-300"
+              : "border-outline-300 text-gray-700"
           }`}
         >
-          {completed && (
-            <Text className="text-sm font-bold text-white">
+          {habit.completed && (
+            <Text className="text-sm font-bold text-black">
               ✓
             </Text>
           )}
-        </View>
+        </Pressable>
 
         {/* Habit information */}
         <View className="flex-1">
           <Text
             className={`text-base font-semibold ${
-              completed
+              habit.completed
                 ? "text-typography-400 line-through"
                 : "text-typography-900"
             }`}
           >
-            {title}
+            {habit.title}
           </Text>
 
           <Text className="mt-1 text-sm text-typography-500">
-            {frequency}
+            {habit.frequency}
           </Text>
         </View>
       </View>
