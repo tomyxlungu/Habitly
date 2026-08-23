@@ -25,6 +25,10 @@ import {
   saveHabits,
 } from "@/src/utils/habitStorage";
 
+const getToday = () => {
+  return new Date().toISOString().split("T")[0];
+};
+
 // These are the habits shown the first time
 // the user opens Habitly.
 const defaultHabits: Habit[] = [
@@ -32,7 +36,7 @@ const defaultHabits: Habit[] = [
     id: "1",
     title: "Read for 20 minutes",
     frequency: "Daily",
-    completed: true,
+    completedDates: [getToday()],
   },
 ];
 
@@ -90,15 +94,41 @@ export default function HomeScreen() {
 
   // Toggle a habit between completed and incomplete.
   const toggleHabit = (id: string) => {
+    const today = getToday();
+
     setHabits((currentHabits) =>
-      currentHabits.map((habit) =>
-        habit.id === id
-          ? {
-              ...habit,
-              completed: !habit.completed,
-            }
-          : habit
-      )
+      currentHabits.map((habit) => {
+        // If this isn't the habit we clicked,
+        // leave it unchanged.
+        if (habit.id !== id) {
+          return habit;
+        }
+
+        // Check whether this habit is already
+        // completed today.
+        const isCompletedToday =
+          habit.completedDates.includes(today);
+
+        // If completed today, remove today's date.
+        if (isCompletedToday) {
+          return {
+            ...habit,
+            completedDates:
+              habit.completedDates.filter(
+                (date) => date !== today
+              ),
+          };
+        }
+
+        // Otherwise, add today's date.
+        return {
+          ...habit,
+          completedDates: [
+            ...habit.completedDates,
+            today,
+          ],
+        };
+      })
     );
   };
 
@@ -133,8 +163,10 @@ export default function HomeScreen() {
   };
 
   // Count completed habits.
+  const today = getToday();
+
   const completedHabits = habits.filter(
-    (habit) => habit.completed
+    (habit) => habit.completedDates.includes(today)
   ).length;
 
   // Add a new habit OR update an existing habit.
@@ -167,7 +199,7 @@ export default function HomeScreen() {
       id: Date.now().toString(),
       title,
       frequency,
-      completed: false,
+      completedDates: [],
     };
 
     setHabits((currentHabits) => [

@@ -21,6 +21,7 @@ export const saveHabits = async (
   }
 };
 
+
 // Load habits from the device.
 export const loadHabits = async (): Promise<Habit[]> => {
   try {
@@ -33,13 +34,35 @@ export const loadHabits = async (): Promise<Habit[]> => {
       return [];
     }
 
-    return JSON.parse(jsonValue) as Habit[];
+    const savedHabits = JSON.parse(jsonValue);
+
+    // Convert old Habitly data to the new format.
+    const habits: Habit[] = savedHabits.map(
+      (habit: any) => ({
+        id: habit.id,
+        title: habit.title,
+        frequency: habit.frequency,
+
+        // New habits use completedDates.
+        //
+        // If an old habit has `completed: true`,
+        // treat it as completed today.
+        completedDates:
+          habit.completedDates ??
+          (habit.completed
+            ? [new Date().toISOString().split("T")[0]]
+            : []),
+      })
+    );
+
+    return habits;
   } catch (error) {
     console.error("Failed to load habits:", error);
 
     return [];
   }
 };
+
 
 // Remove all saved habits.
 // We'll mainly use this later for testing/reset functionality.

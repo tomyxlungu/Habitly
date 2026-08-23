@@ -14,6 +14,14 @@ export default function HabitCard({
   onToggle,
   onLongPress,
 }: HabitCardProps) {
+  // Get today's date in the same format used
+  // inside completedDates.
+  const today = new Date().toISOString().split("T")[0];
+
+  // Check if this habit has been completed today.
+  const completedToday =
+    habit.completedDates.includes(today);
+
   return (
     <Pressable
       onLongPress={() => onLongPress(habit)}
@@ -22,7 +30,7 @@ export default function HabitCard({
     >
       <Card
         className={`mb-3 rounded-3xl border p-4 ${
-          habit.completed
+          completedToday
             ? "border-primary-100 bg-primary-50"
             : "border-outline-100 bg-background-0"
         }`}
@@ -33,12 +41,12 @@ export default function HabitCard({
           <Pressable
             onPress={() => onToggle(habit.id)}
             className={`mr-4 h-9 w-9 items-center justify-center rounded-full border-2 ${
-              habit.completed
+              completedToday
                 ? "border-primary-500 bg-primary-500"
                 : "border-outline-300 bg-background-0"
             }`}
           >
-            {habit.completed ? (
+            {completedToday ? (
               <Text className="text-base font-black text-black">
                 ✓
               </Text>
@@ -52,7 +60,7 @@ export default function HabitCard({
             <Text
               numberOfLines={1}
               className={`text-base font-bold ${
-                habit.completed
+                completedToday
                   ? "text-typography-500 line-through"
                   : "text-typography-900"
               }`}
@@ -70,7 +78,7 @@ export default function HabitCard({
           </View>
 
           {/* Completed label */}
-          {habit.completed && (
+          {completedToday && (
             <View className="ml-3 rounded-full bg-primary-100 px-2.5 py-1">
               <Text className="text-xs font-bold text-primary-600">
                 Done
@@ -83,4 +91,3 @@ export default function HabitCard({
     </Pressable>
   );
 }
-
