@@ -1,17 +1,22 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 import { Card } from "@/components/ui/card";
-import type { Habit } from "@/types/habit";
+import type { Habit } from "@/src/types/habit";
 
 type HabitCardProps = {
   habit: Habit;
+  onToggle: (id: string) => void;
 };
 
-export default function HabitCard({ habit }: HabitCardProps) {
+export default function HabitCard({
+  habit,
+  onToggle,
+}: HabitCardProps) {
   return (
     <Card className="mb-3 rounded-2xl p-4">
       <View className="flex-row items-center">
-        <View
+        <Pressable
+          onPress={() => onToggle(habit.id)}
           className={`mr-4 h-7 w-7 items-center justify-center rounded-full border-2 ${
             habit.completed
               ? "border-primary-500 bg-primary-500"
@@ -19,11 +24,11 @@ export default function HabitCard({ habit }: HabitCardProps) {
           }`}
         >
           {habit.completed && (
-            <Text className="text-sm font-bold text-white">
+            <Text className="text-sm font-bold text-black">
               ✓
             </Text>
           )}
-        </View>
+        </Pressable>
 
         <View className="flex-1">
           <Text

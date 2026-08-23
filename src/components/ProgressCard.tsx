@@ -18,8 +18,8 @@ export default function ProgressCard({
   const percentage = total > 0 ? (completed / total) * 100 : 0;
 
   return (
-    <Card className="rounded-2xl p-5">
-      <Text className="text-lg font-semibold text-typography-900">
+    <Card className="rounded-4xl p-5">
+      <Text className="text-lg font-black text-typography-900">
         Today's Progress
       </Text>
 
@@ -28,7 +28,7 @@ export default function ProgressCard({
           {completed}
         </Text>
 
-        <Text className="mb-1 ml-2 text-base text-typography-500">
+        <Text className="mb-1 ml-2 font-light text-base text-typography-500">
           / {total} habits
         </Text>
       </View>
@@ -37,7 +37,7 @@ export default function ProgressCard({
         <ProgressFilledTrack />
       </Progress>
 
-      <Text className="mt-2 text-sm text-typography-500">
+      <Text className="mt-2 text-sm font-semibold text-typography-500">
         {Math.round(percentage)}% completed
       </Text>
     </Card>
