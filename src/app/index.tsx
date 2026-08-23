@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
+
 
 import AddHabit from "@/src/components/AddHabit";
 import HabitCard from "@/src/components/HabitCard";
@@ -57,7 +59,11 @@ export default function HomeScreen() {
 };
 
   return (
-    <ScrollView className="flex-1 bg-background-50">
+    <KeyboardAwareScrollView
+      className="flex-1 bg-background-50"
+      bottomOffset={50}
+      keyboardShouldPersistTaps="handled"
+    >      
       <View className="px-5 pb-10 pt-16">
         {/* Header */}
         <View className="mb-8">
@@ -91,6 +97,6 @@ export default function HomeScreen() {
 
         <AddHabit onAdd={addHabit} />
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
