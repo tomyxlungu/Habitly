@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
-
 import AddHabit from "@/src/components/AddHabit";
 import HabitCard from "@/src/components/HabitCard";
 import ProgressCard from "@/src/components/ProgressCard";
-import type { Habit } from "@/src/types/habit";
+import type { Habit, HabitFrequency } from "@/src/types/habit";
 
 export default function HomeScreen() {
   const [habits, setHabits] = useState<Habit[]>([
@@ -30,6 +29,7 @@ export default function HomeScreen() {
     },
   ]);
 
+  // Toggle a habit between completed and incomplete.
   const toggleHabit = (id: string) => {
     setHabits((currentHabits) =>
       currentHabits.map((habit) =>
@@ -40,31 +40,40 @@ export default function HomeScreen() {
     );
   };
 
+  // Count how many habits are currently completed.
   const completedHabits = habits.filter(
     (habit) => habit.completed
   ).length;
 
-  const addHabit = (title: string) => {
-  const newHabit: Habit = {
-    id: Date.now().toString(),
-    title,
-    frequency: "Daily",
-    completed: false,
-  };
+  // Add a new habit to the habits array.
+  //
+  // `title` comes from the input.
+  // `frequency` comes from the frequency selector.
+  const addHabit = (
+    title: string,
+    frequency: HabitFrequency
+  ) => {
+    const newHabit: Habit = {
+      id: Date.now().toString(),
+      title,
+      frequency,
+      completed: false,
+    };
 
-  setHabits((currentHabits) => [
-    ...currentHabits,
-    newHabit,
-  ]);
-};
+    setHabits((currentHabits) => [
+      ...currentHabits,
+      newHabit,
+    ]);
+  };
 
   return (
     <KeyboardAwareScrollView
       className="flex-1 bg-background-50"
       bottomOffset={50}
       keyboardShouldPersistTaps="handled"
-    >      
+    >
       <View className="px-5 pb-10 pt-16">
+
         {/* Header */}
         <View className="mb-8">
           <Text className="text-3xl font-black text-typography-900">
@@ -87,6 +96,7 @@ export default function HomeScreen() {
           Today's Habits
         </Text>
 
+        {/* Display every habit */}
         {habits.map((habit) => (
           <HabitCard
             key={habit.id}
@@ -95,7 +105,9 @@ export default function HomeScreen() {
           />
         ))}
 
+        {/* Add a new habit */}
         <AddHabit onAdd={addHabit} />
+
       </View>
     </KeyboardAwareScrollView>
   );
