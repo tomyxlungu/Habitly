@@ -9,5 +9,5 @@ export type Habit = {
   id: string;
   title: string;
   frequency: HabitFrequency;
-  completed: boolean;
+  completedDates: string[];
 };
