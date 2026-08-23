@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
@@ -20,28 +20,31 @@ import type {
   HabitFrequency,
 } from "@/src/types/habit";
 
+import {
+  loadHabits,
+  saveHabits,
+} from "@/src/utils/habitStorage";
+
+// These are the habits shown the first time
+// the user opens Habitly.
+const defaultHabits: Habit[] = [
+  {
+    id: "1",
+    title: "Read for 20 minutes",
+    frequency: "Daily",
+    completed: true,
+  },
+];
+
 export default function HomeScreen() {
   // Stores all habits displayed on the screen.
-  const [habits, setHabits] = useState<Habit[]>([
-    {
-      id: "1",
-      title: "Read for 20 minutes",
-      frequency: "Daily",
-      completed: true,
-    },
-    {
-      id: "2",
-      title: "Drink 2L of water",
-      frequency: "Daily",
-      completed: false,
-    },
-    {
-      id: "3",
-      title: "Exercise",
-      frequency: "3 times a week",
-      completed: true,
-    },
-  ]);
+  const [habits, setHabits] = useState<Habit[]>(
+    defaultHabits
+  );
+
+  // Keeps track of whether we've finished loading
+  // habits from AsyncStorage.
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Stores the habit selected during a long press.
   const [selectedHabit, setSelectedHabit] =
@@ -55,7 +58,37 @@ export default function HomeScreen() {
   const [showActionDialog, setShowActionDialog] =
     useState(false);
 
-  // Toggle a habit.
+  // Load saved habits when the screen opens.
+  useEffect(() => {
+    const loadSavedHabits = async () => {
+      const savedHabits = await loadHabits();
+
+      // If saved habits exist, use them.
+      //
+      // If there aren't any saved habits yet,
+      // keep our default habits.
+      if (savedHabits.length > 0) {
+        setHabits(savedHabits);
+      }
+
+      // Tell the app that loading is finished.
+      setIsLoaded(true);
+    };
+
+    loadSavedHabits();
+  }, []);
+
+  // Save habits whenever the habits state changes.
+  //
+  // We wait until loading has finished so that
+  // the default habits don't overwrite saved data.
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    saveHabits(habits);
+  }, [habits, isLoaded]);
+
+  // Toggle a habit between completed and incomplete.
   const toggleHabit = (id: string) => {
     setHabits((currentHabits) =>
       currentHabits.map((habit) =>
@@ -69,13 +102,14 @@ export default function HomeScreen() {
     );
   };
 
-  // Open the action dialog.
+  // Open the action dialog when a habit
+  // is long pressed.
   const openHabitActions = (habit: Habit) => {
     setSelectedHabit(habit);
     setShowActionDialog(true);
   };
 
-  // Start editing a habit.
+  // Start editing the selected habit.
   const editHabit = () => {
     if (!selectedHabit) return;
 
@@ -84,7 +118,7 @@ export default function HomeScreen() {
     setSelectedHabit(null);
   };
 
-  // Delete a habit.
+  // Delete the selected habit.
   const deleteHabit = () => {
     if (!selectedHabit) return;
 
@@ -103,12 +137,13 @@ export default function HomeScreen() {
     (habit) => habit.completed
   ).length;
 
-  // Add or edit a habit.
+  // Add a new habit OR update an existing habit.
   const addHabit = (
     title: string,
     frequency: HabitFrequency
   ) => {
-    // Edit existing habit.
+    // If we're editing an existing habit,
+    // update that habit.
     if (editingHabit) {
       setHabits((currentHabits) =>
         currentHabits.map((habit) =>
@@ -127,7 +162,7 @@ export default function HomeScreen() {
       return;
     }
 
-    // Create new habit.
+    // Otherwise create a new habit.
     const newHabit: Habit = {
       id: Date.now().toString(),
       title,
@@ -141,12 +176,6 @@ export default function HomeScreen() {
     ]);
   };
 
-  // Close the action dialog.
-  const closeActionDialog = () => {
-    setShowActionDialog(false);
-    setSelectedHabit(null);
-  };
-
   return (
     <>
       <KeyboardAwareScrollView
@@ -158,12 +187,20 @@ export default function HomeScreen() {
 
           {/* Header */}
           <View className="mb-8">
-            <Text className="text-3xl font-black text-typography-900">
-              Hello Mr. Xlungu
+            <Text className="text-sm font-semibold text-primary-500">
+              HABITLY
             </Text>
 
-            <Text className="mt-1 text-base font-semibold text-typography-500">
-              Thursday, August 20
+            <Text className="mt-1 text-3xl font-black text-typography-900">
+              Hello, Mr. Xlungu
+            </Text>
+
+            <Text className="mt-1 text-base font-medium text-typography-500">
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
             </Text>
           </View>
 
@@ -196,58 +233,42 @@ export default function HomeScreen() {
               setEditingHabit(null)
             }
           />
-
         </View>
       </KeyboardAwareScrollView>
 
-      {/* Habit action dialog */}
+      {/* Habit actions dialog */}
       <AlertDialog
         isOpen={showActionDialog}
-        onClose={closeActionDialog}
+        onClose={() => {
+          setShowActionDialog(false);
+          setSelectedHabit(null);
+        }}
       >
         <AlertDialogBackdrop />
 
-        <AlertDialogContent className="rounded-[28px] p-5">
+        <AlertDialogContent className="rounded-3xl">
 
-          {/* Header */}
-          <AlertDialogHeader className="pb-2">
-            <View className="w-full">
-
-              {/* Small indicator */}
-              <View className="mb-4 h-1.5 w-10 self-center rounded-full bg-outline-300" />
-
-              <Text className="text-xs font-bold uppercase tracking-wider text-typography-400">
-                Habit options
-              </Text>
-
-              <Text
-                numberOfLines={2}
-                className="mt-2 text-2xl font-black text-typography-900"
-              >
+          <AlertDialogHeader>
+            <View>
+              <Text className="text-xl font-bold text-typography-900">
                 {selectedHabit?.title}
               </Text>
 
-              {selectedHabit && (
-                <View className="mt-3 self-start rounded-full bg-background-100 px-3 py-1.5">
-                  <Text className="text-xs font-semibold text-typography-500">
-                    {selectedHabit.frequency}
-                  </Text>
-                </View>
-              )}
-
+              <Text className="mt-1 text-sm text-typography-500">
+                What would you like to do?
+              </Text>
             </View>
           </AlertDialogHeader>
 
-          {/* Actions */}
-          <AlertDialogBody className="pt-4">
+          <AlertDialogBody>
 
             {/* Edit */}
             <Button
               variant="outline"
-              className="mb-3 h-14 rounded-2xl border-outline-200"
+              className="mb-3 h-12 rounded-xl"
               onPress={editHabit}
             >
-              <ButtonText className="text-base font-bold text-typography-900">
+              <ButtonText className="font-bold">
                 Edit Habit
               </ButtonText>
             </Button>
@@ -255,10 +276,10 @@ export default function HomeScreen() {
             {/* Delete */}
             <Button
               variant="destructive"
-              className="h-14 rounded-2xl"
+              className="h-12 rounded-xl"
               onPress={deleteHabit}
             >
-              <ButtonText className="text-base font-bold">
+              <ButtonText className="font-bold">
                 Delete Habit
               </ButtonText>
             </Button>
@@ -266,13 +287,16 @@ export default function HomeScreen() {
           </AlertDialogBody>
 
           {/* Cancel */}
-          <AlertDialogFooter className="pt-2">
+          <AlertDialogFooter>
             <Button
               variant="ghost"
-              className="h-12 w-full rounded-2xl"
-              onPress={closeActionDialog}
+              className="w-full rounded-xl"
+              onPress={() => {
+                setShowActionDialog(false);
+                setSelectedHabit(null);
+              }}
             >
-              <ButtonText className="font-bold text-typography-500">
+              <ButtonText className="font-bold">
                 Cancel
               </ButtonText>
             </Button>
