@@ -15,110 +15,181 @@ import { Button, ButtonText } from "@/components/ui/button";
 import AddHabit from "@/src/components/AddHabit";
 import HabitCard from "@/src/components/HabitCard";
 import ProgressCard from "@/src/components/ProgressCard";
+
 import type {
   Habit,
   HabitFrequency,
 } from "@/src/types/habit";
 
 import {
+  getToday,
   loadHabits,
+  resetDailyHabits,
   saveHabits,
 } from "@/src/utils/habitStorage";
 
-// These are the habits shown the first time
-// the user opens Habitly.
+// --------------------------------------------------
+// Default habits
+// --------------------------------------------------
+
 const defaultHabits: Habit[] = [
   {
     id: "1",
     title: "Read for 20 minutes",
     frequency: "Daily",
-    completed: true,
+    completed: false,
+    completedDates: [],
   },
 ];
 
-export default function HomeScreen() {
-  // Stores all habits displayed on the screen.
-  const [habits, setHabits] = useState<Habit[]>(
-    defaultHabits
-  );
+// --------------------------------------------------
+// Home Screen
+// --------------------------------------------------
 
-  // Keeps track of whether we've finished loading
-  // habits from AsyncStorage.
+export default function HomeScreen() {
+  const [habits, setHabits] =
+    useState<Habit[]>(defaultHabits);
+
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Stores the habit selected during a long press.
   const [selectedHabit, setSelectedHabit] =
     useState<Habit | null>(null);
 
-  // Stores the habit currently being edited.
   const [editingHabit, setEditingHabit] =
     useState<Habit | null>(null);
 
-  // Controls the action dialog.
   const [showActionDialog, setShowActionDialog] =
     useState(false);
 
-  // Load saved habits when the screen opens.
+  // --------------------------------------------------
+  // Load habits
+  // --------------------------------------------------
+
   useEffect(() => {
     const loadSavedHabits = async () => {
-      const savedHabits = await loadHabits();
+      try {
+        const savedHabits = await loadHabits();
 
-      // If saved habits exist, use them.
-      //
-      // If there aren't any saved habits yet,
-      // keep our default habits.
-      if (savedHabits.length > 0) {
-        setHabits(savedHabits);
+        if (savedHabits.length > 0) {
+          // Make sure old saved habits have
+          // completedDates.
+          const normalizedHabits = savedHabits.map(
+            (habit) => ({
+              ...habit,
+              completedDates:
+                habit.completedDates ?? [],
+            })
+          );
+
+          // Reset today's completion state while
+          // preserving all historical dates.
+          const updatedHabits =
+            resetDailyHabits(normalizedHabits);
+
+          setHabits(updatedHabits);
+
+          // Save the updated state immediately.
+          await saveHabits(updatedHabits);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to load habits:",
+          error
+        );
+      } finally {
+        setIsLoaded(true);
       }
-
-      // Tell the app that loading is finished.
-      setIsLoaded(true);
     };
 
     loadSavedHabits();
   }, []);
 
-  // Save habits whenever the habits state changes.
-  //
-  // We wait until loading has finished so that
-  // the default habits don't overwrite saved data.
+  // --------------------------------------------------
+  // Save habits
+  // --------------------------------------------------
+
   useEffect(() => {
     if (!isLoaded) return;
 
     saveHabits(habits);
   }, [habits, isLoaded]);
 
-  // Toggle a habit between completed and incomplete.
+  // --------------------------------------------------
+  // Toggle habit
+  // --------------------------------------------------
+
   const toggleHabit = (id: string) => {
+    const today = getToday();
+
     setHabits((currentHabits) =>
-      currentHabits.map((habit) =>
-        habit.id === id
-          ? {
-              ...habit,
-              completed: !habit.completed,
-            }
-          : habit
-      )
+      currentHabits.map((habit) => {
+        if (habit.id !== id) {
+          return habit;
+        }
+
+        const completedDates =
+          habit.completedDates ?? [];
+
+        const isCompletedToday =
+          completedDates.includes(today);
+
+        // ------------------------------------------
+        // Uncomplete today's habit
+        // ------------------------------------------
+
+        if (isCompletedToday) {
+          return {
+            ...habit,
+            completed: false,
+            completedDates:
+              completedDates.filter(
+                (date) => date !== today
+              ),
+          };
+        }
+
+        // ------------------------------------------
+        // Complete today's habit
+        // ------------------------------------------
+
+        return {
+          ...habit,
+          completed: true,
+          completedDates: [
+            ...completedDates,
+            today,
+          ],
+        };
+      })
     );
   };
 
-  // Open the action dialog when a habit
-  // is long pressed.
+  // --------------------------------------------------
+  // Open habit actions
+  // --------------------------------------------------
+
   const openHabitActions = (habit: Habit) => {
     setSelectedHabit(habit);
     setShowActionDialog(true);
   };
 
-  // Start editing the selected habit.
+  // --------------------------------------------------
+  // Edit habit
+  // --------------------------------------------------
+
   const editHabit = () => {
     if (!selectedHabit) return;
 
     setEditingHabit(selectedHabit);
+
     setShowActionDialog(false);
     setSelectedHabit(null);
   };
 
-  // Delete the selected habit.
+  // --------------------------------------------------
+  // Delete habit
+  // --------------------------------------------------
+
   const deleteHabit = () => {
     if (!selectedHabit) return;
 
@@ -132,18 +203,26 @@ export default function HomeScreen() {
     setSelectedHabit(null);
   };
 
-  // Count completed habits.
+  // --------------------------------------------------
+  // Completed habits
+  // --------------------------------------------------
+
   const completedHabits = habits.filter(
     (habit) => habit.completed
   ).length;
 
-  // Add a new habit OR update an existing habit.
+  // --------------------------------------------------
+  // Add / Edit habit
+  // --------------------------------------------------
+
   const addHabit = (
     title: string,
     frequency: HabitFrequency
   ) => {
-    // If we're editing an existing habit,
-    // update that habit.
+    // ----------------------------------------------
+    // Editing an existing habit
+    // ----------------------------------------------
+
     if (editingHabit) {
       setHabits((currentHabits) =>
         currentHabits.map((habit) =>
@@ -162,12 +241,16 @@ export default function HomeScreen() {
       return;
     }
 
-    // Otherwise create a new habit.
+    // ----------------------------------------------
+    // Create a new habit
+    // ----------------------------------------------
+
     const newHabit: Habit = {
       id: Date.now().toString(),
       title,
       frequency,
       completed: false,
+      completedDates: [],
     };
 
     setHabits((currentHabits) => [
@@ -176,17 +259,26 @@ export default function HomeScreen() {
     ]);
   };
 
+  // --------------------------------------------------
+  // Render
+  // --------------------------------------------------
+
   return (
     <>
       <KeyboardAwareScrollView
         className="flex-1 bg-background-50"
         bottomOffset={50}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 100,
+        }}
       >
-        <View className="px-5 pb-10 pt-16">
+        <View className="px-5 pt-16">
 
           {/* Header */}
-          <View className="mb-8">
+
+          <View className="mb-7">
             <Text className="text-sm font-semibold text-primary-500">
               HABITLY
             </Text>
@@ -196,36 +288,55 @@ export default function HomeScreen() {
             </Text>
 
             <Text className="mt-1 text-base font-medium text-typography-500">
-              {new Date().toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
+              {new Date().toLocaleDateString(
+                "en-US",
+                {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                }
+              )}
             </Text>
           </View>
 
           {/* Progress */}
+
           <ProgressCard
             completed={completedHabits}
             total={habits.length}
           />
 
           {/* Today's Habits */}
-          <Text className="mb-4 mt-8 text-xl font-bold text-typography-900">
+
+          <Text className="mb-3 mt-7 text-xl font-bold text-typography-900">
             Today's Habits
           </Text>
 
-          {/* Habit list */}
-          {habits.map((habit) => (
-            <HabitCard
-              key={habit.id}
-              habit={habit}
-              onToggle={toggleHabit}
-              onLongPress={openHabitActions}
-            />
-          ))}
+          {/* Habit List */}
 
-          {/* Add / Edit habit */}
+          {habits.length === 0 ? (
+            <View className="items-center rounded-3xl border border-dashed border-outline-200 bg-background-0 px-5 py-8">
+              <Text className="text-base font-bold text-typography-700">
+                No habits yet
+              </Text>
+
+              <Text className="mt-1 text-center text-sm font-medium text-typography-500">
+                Add your first habit below.
+              </Text>
+            </View>
+          ) : (
+            habits.map((habit) => (
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                onToggle={toggleHabit}
+                onLongPress={openHabitActions}
+              />
+            ))
+          )}
+
+          {/* Add / Edit Habit */}
+
           <AddHabit
             onAdd={addHabit}
             editingHabit={editingHabit}
@@ -233,10 +344,13 @@ export default function HomeScreen() {
               setEditingHabit(null)
             }
           />
+
+          <View className="h-8" />
         </View>
       </KeyboardAwareScrollView>
 
-      {/* Habit actions dialog */}
+      {/* Habit Actions Dialog */}
+
       <AlertDialog
         isOpen={showActionDialog}
         onClose={() => {
@@ -254,7 +368,7 @@ export default function HomeScreen() {
                 {selectedHabit?.title}
               </Text>
 
-              <Text className="mt-1 text-sm text-typography-500">
+              <Text className="mt-1 text-sm font-medium text-typography-500">
                 What would you like to do?
               </Text>
             </View>
@@ -263,6 +377,7 @@ export default function HomeScreen() {
           <AlertDialogBody>
 
             {/* Edit */}
+
             <Button
               variant="outline"
               className="mb-3 h-12 rounded-xl"
@@ -274,6 +389,7 @@ export default function HomeScreen() {
             </Button>
 
             {/* Delete */}
+
             <Button
               variant="destructive"
               className="h-12 rounded-xl"
@@ -287,6 +403,7 @@ export default function HomeScreen() {
           </AlertDialogBody>
 
           {/* Cancel */}
+
           <AlertDialogFooter>
             <Button
               variant="ghost"

@@ -10,4 +10,8 @@ export type Habit = {
   title: string;
   frequency: HabitFrequency;
   completed: boolean;
+
+  // Dates when this habit was completed.
+  // Format: YYYY-MM-DD
+  completedDates: string[];
 };
