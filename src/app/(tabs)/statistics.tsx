@@ -19,14 +19,26 @@ import {
 } from "@/components/ui/progress";
 
 import type { Habit } from "@/src/types/habit";
-import {
-    getToday,
-    loadHabits,
-} from "@/src/utils/habitStorage";
+import { loadHabits } from "@/src/utils/habitStorage";
 
 // --------------------------------------------------
 // Date helpers
 // --------------------------------------------------
+
+const getToday = () => {
+  const date = new Date();
+
+  const year = date.getFullYear();
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
 const getDateOffset = (daysAgo: number) => {
   const date = new Date();
@@ -46,6 +58,28 @@ const getDateOffset = (daysAgo: number) => {
   ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+};
+
+// --------------------------------------------------
+// Individual habit streak
+// --------------------------------------------------
+
+const getHabitStreak = (habit: Habit) => {
+  let streak = 0;
+
+  for (let daysAgo = 0; ; daysAgo++) {
+    const date = getDateOffset(daysAgo);
+
+    if (
+      !habit.completedDates?.includes(date)
+    ) {
+      break;
+    }
+
+    streak++;
+  }
+
+  return streak;
 };
 
 // --------------------------------------------------
@@ -123,6 +157,7 @@ export default function StatisticsScreen() {
         const date = getDateOffset(daysAgo);
 
         const dateObject = new Date();
+
         dateObject.setDate(
           dateObject.getDate() - daysAgo
         );
@@ -136,15 +171,16 @@ export default function StatisticsScreen() {
           totalHabits === 0
             ? 0
             : Math.round(
-                (completedCount / totalHabits) *
-                  100
+                (completedCount / totalHabits) * 100
               );
 
         return {
           date,
           day: dateObject.toLocaleDateString(
             "en-US",
-            { weekday: "narrow" }
+            {
+              weekday: "narrow",
+            }
           ),
           completedCount,
           percentage,
@@ -159,34 +195,24 @@ export default function StatisticsScreen() {
     (day) => day.completed
   ).length;
 
-  const weeklyCompletion =
-    Math.round(
-      (completedDays / 7) * 100
-    );
+  const weeklyCompletion = Math.round(
+    (completedDays / 7) * 100
+  );
 
   // --------------------------------------------------
-  // Current streak
+  // Best overall habit streak
   // --------------------------------------------------
 
-  const currentStreak = useMemo(() => {
-    let streak = 0;
-
-    for (let daysAgo = 0; ; daysAgo++) {
-      const date = getDateOffset(daysAgo);
-
-      const completed = habits.some(
-        (habit) =>
-          habit.completedDates?.includes(date)
-      );
-
-      if (!completed) {
-        break;
-      }
-
-      streak++;
+  const bestStreak = useMemo(() => {
+    if (habits.length === 0) {
+      return 0;
     }
 
-    return streak;
+    return Math.max(
+      ...habits.map((habit) =>
+        getHabitStreak(habit)
+      )
+    );
   }, [habits]);
 
   // --------------------------------------------------
@@ -231,9 +257,7 @@ export default function StatisticsScreen() {
           </Text>
         </View>
 
-        {/* ------------------------------------------------ */}
         {/* TODAY */}
-        {/* ------------------------------------------------ */}
 
         <Card className="rounded-2xl border border-outline-100 bg-background-0 p-4">
 
@@ -270,9 +294,7 @@ export default function StatisticsScreen() {
 
         </Card>
 
-        {/* ------------------------------------------------ */}
         {/* QUICK STATS */}
-        {/* ------------------------------------------------ */}
 
         <View className="mt-3 flex-row gap-3">
 
@@ -304,7 +326,7 @@ export default function StatisticsScreen() {
 
           </Card>
 
-          {/* Streak */}
+          {/* Best streak */}
 
           <Card className="flex-1 rounded-2xl border border-outline-100 bg-background-0 p-3.5">
 
@@ -327,16 +349,14 @@ export default function StatisticsScreen() {
             </View>
 
             <Text className="mt-2 text-xl font-black text-primary-500">
-              {currentStreak}
+              {bestStreak}
             </Text>
 
           </Card>
 
         </View>
 
-        {/* ------------------------------------------------ */}
         {/* WEEK */}
-        {/* ------------------------------------------------ */}
 
         <Card className="mt-3 rounded-2xl border border-outline-100 bg-background-0 p-4">
 
@@ -373,8 +393,6 @@ export default function StatisticsScreen() {
             </Text>
 
           </View>
-
-          {/* Days */}
 
           <View className="mt-4 flex-row justify-between">
 
@@ -418,9 +436,7 @@ export default function StatisticsScreen() {
 
         </Card>
 
-        {/* ------------------------------------------------ */}
-        {/* HABITS */}
-        {/* ------------------------------------------------ */}
+        {/* YOUR HABITS */}
 
         <View className="mb-3 mt-7">
 
@@ -452,68 +468,95 @@ export default function StatisticsScreen() {
                   today
                 ) ?? false;
 
+              const streak =
+                getHabitStreak(habit);
+
               return (
                 <View
                   key={habit.id}
-                  className={`flex-row items-center px-2 py-2.5 ${
+                  className={`px-2 py-3 ${
                     index !== habits.length - 1
                       ? "border-b border-outline-100"
                       : ""
                   }`}
                 >
 
-                  {/* Status */}
+                  <View className="flex-row items-center">
 
-                  <View
-                    className={`mr-3 h-7 w-7 items-center justify-center rounded-full ${
-                      completed
-                        ? "bg-primary-500"
-                        : "border border-outline-300"
-                    }`}
-                  >
-                    {completed && (
-                      <Check
-                        size={13}
-                        color="#000000"
-                        strokeWidth={3}
-                      />
-                    )}
-                  </View>
+                    {/* Status */}
 
-                  {/* Name */}
-
-                  <View className="flex-1">
-
-                    <Text
-                      numberOfLines={1}
-                      className={`text-sm font-bold ${
+                    <View
+                      className={`mr-3 h-7 w-7 items-center justify-center rounded-full ${
                         completed
-                          ? "text-typography-500 line-through"
-                          : "text-typography-900"
+                          ? "bg-primary-500"
+                          : "border border-outline-300"
                       }`}
                     >
-                      {habit.title}
-                    </Text>
+                      {completed && (
+                        <Check
+                          size={13}
+                          color="#000000"
+                          strokeWidth={3}
+                        />
+                      )}
+                    </View>
 
-                    <Text className="mt-0.5 text-[10px] font-medium text-typography-400">
-                      {habit.frequency}
+                    {/* Name */}
+
+                    <View className="flex-1">
+
+                      <Text
+                        numberOfLines={1}
+                        className={`text-sm font-bold ${
+                          completed
+                            ? "text-typography-500 line-through"
+                            : "text-typography-900"
+                        }`}
+                      >
+                        {habit.title}
+                      </Text>
+
+                      <Text className="mt-0.5 text-[10px] font-medium text-typography-400">
+                        {habit.frequency}
+                      </Text>
+
+                    </View>
+
+                    {/* Status */}
+
+                    <Text
+                      className={`text-[11px] font-bold ${
+                        completed
+                          ? "text-primary-600"
+                          : "text-typography-400"
+                      }`}
+                    >
+                      {completed
+                        ? "Done"
+                        : "Pending"}
                     </Text>
 
                   </View>
 
-                  {/* Status */}
+                  {/* Individual streak */}
 
-                  <Text
-                    className={`text-[11px] font-bold ${
-                      completed
-                        ? "text-primary-600"
-                        : "text-typography-400"
-                    }`}
-                  >
-                    {completed
-                      ? "Done"
-                      : "Pending"}
-                  </Text>
+                  <View className="ml-10 mt-2 flex-row items-center">
+
+                    <Flame
+                      size={12}
+                      color="#16a34a"
+                      strokeWidth={2.5}
+                    />
+
+                    <Text className="ml-1 text-[10px] font-bold text-primary-600">
+                      {streak} day
+                      {streak === 1
+                        ? ""
+                        : "s"}{" "}
+                      streak
+                    </Text>
+
+                  </View>
 
                 </View>
               );
