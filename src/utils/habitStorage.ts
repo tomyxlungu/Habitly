@@ -2,10 +2,36 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import type { Habit } from "@/src/types/habit";
 
-// The key used to store Habitly's habits on the device.
+// --------------------------------------------------
+// Storage
+// --------------------------------------------------
+
 const HABITS_STORAGE_KEY = "@habitly/habits";
 
-// Save all habits to the device.
+// --------------------------------------------------
+// Date helpers
+// --------------------------------------------------
+
+export const getToday = (): string => {
+  const date = new Date();
+
+  const year = date.getFullYear();
+
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+// --------------------------------------------------
+// Save habits
+// --------------------------------------------------
+
 export const saveHabits = async (
   habits: Habit[]
 ): Promise<void> => {
@@ -17,61 +43,90 @@ export const saveHabits = async (
       jsonValue
     );
   } catch (error) {
-    console.error("Failed to save habits:", error);
+    console.error(
+      "Failed to save habits:",
+      error
+    );
   }
 };
 
+// --------------------------------------------------
+// Load habits
+// --------------------------------------------------
 
-// Load habits from the device.
 export const loadHabits = async (): Promise<Habit[]> => {
   try {
-    const jsonValue = await AsyncStorage.getItem(
-      HABITS_STORAGE_KEY
-    );
+    const jsonValue =
+      await AsyncStorage.getItem(
+        HABITS_STORAGE_KEY
+      );
 
-    // Nothing has been saved yet.
     if (jsonValue === null) {
       return [];
     }
 
     const savedHabits = JSON.parse(jsonValue);
 
-    // Convert old Habitly data to the new format.
-    const habits: Habit[] = savedHabits.map(
-      (habit: any) => ({
+    const habits: Habit[] =
+      savedHabits.map((habit: any) => ({
         id: habit.id,
         title: habit.title,
         frequency: habit.frequency,
 
-        // New habits use completedDates.
-        //
-        // If an old habit has `completed: true`,
-        // treat it as completed today.
+        completed:
+          habit.completed ?? false,
+
         completedDates:
           habit.completedDates ??
           (habit.completed
-            ? [new Date().toISOString().split("T")[0]]
+            ? [getToday()]
             : []),
-      })
-    );
+      }));
 
     return habits;
   } catch (error) {
-    console.error("Failed to load habits:", error);
+    console.error(
+      "Failed to load habits:",
+      error
+    );
 
     return [];
   }
 };
 
+// --------------------------------------------------
+// Reset today's completion state
+// --------------------------------------------------
 
-// Remove all saved habits.
-// We'll mainly use this later for testing/reset functionality.
+export const resetDailyHabits = (
+  habits: Habit[]
+): Habit[] => {
+  const today = getToday();
+
+  return habits.map((habit) => ({
+    ...habit,
+
+    completed:
+      habit.completedDates.includes(today),
+
+    completedDates:
+      habit.completedDates ?? [],
+  }));
+};
+
+// --------------------------------------------------
+// Clear habits
+// --------------------------------------------------
+
 export const clearHabits = async (): Promise<void> => {
   try {
     await AsyncStorage.removeItem(
       HABITS_STORAGE_KEY
     );
   } catch (error) {
-    console.error("Failed to clear habits:", error);
+    console.error(
+      "Failed to clear habits:",
+      error
+    );
   }
 };
